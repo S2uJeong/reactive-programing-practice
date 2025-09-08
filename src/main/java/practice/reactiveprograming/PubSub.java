@@ -6,6 +6,7 @@ import org.reactivestreams.Subscriber;
 import org.reactivestreams.Subscription;
 
 
+import java.util.Collections;
 import java.util.List;
 import java.util.function.BiFunction;
 import java.util.function.Function;
@@ -29,20 +30,26 @@ public class PubSub {
     public static void main(String[] args) {
         // Pub : 데이터 제공자
         Publisher<Integer> pub = iterPub(Stream.iterate(1, a -> a + 1).limit(10).collect(Collectors.toList()));
-        Publisher<Integer> mapPub = mapPub(pub, s -> s * 10);
-        Publisher<Integer> map2Pub = mapPub(mapPub, s -> s / 5);
-        Publisher<Integer> sumPub = sumPub(pub); // 계산만 하고 있다가 계산 다 하면 그때야 보내는 pub
-        Publisher<Integer> reducePub = reducePub(pub, 0, (a, b) -> a+b); // pub, 초기값, 계산로직
+        Publisher<String> mapPub = mapPub(pub, s -> "[" + s + "]");
+
+//        Publisher<Integer> map2Pub = mapPub(mapPub, s -> s / 5);
+//        Publisher<Integer> sumPub = sumPub(pub); // 계산만 하고 있다가 계산 다 하면 그때야 보내는 pub
+        Publisher<String> reducePub = reducePub(pub, "", (a, b) -> a+ "-" +b); // pub, 초기값, 계산로직
         // Sub : 데이터 받는자
         reducePub.subscribe(logSub());
     }
 
-    private static Publisher<Integer> reducePub(Publisher<Integer> pub, int init, BiFunction<Integer, Integer, Integer> bf) {
-        return new Publisher<Integer>() {
+
+    // reduce 동작 과정 - 초기값 0 [1,2,3,4,5]  ---결과--> 1개
+    // 0 -> (0,1) -> 0 + 1 = 1
+    // 1 -> (1,2) -> 1 + 2 = 3
+    // 3 -> (3,3) -> 3 + 3 = 6 ...
+    private static Publisher<String> reducePub(Publisher<Integer> pub, String init, BiFunction<String, Integer, String> bf) {
+        return new Publisher<String>() {
             @Override
-            public void subscribe(Subscriber<? super Integer> sub) {
-                pub.subscribe(new DelegateSub(sub) {
-                    int result = init;
+            public void subscribe(Subscriber<? super String> sub) {
+                pub.subscribe(new DelegateSub<Integer, String>(sub) {
+                    String result = init;
                     @Override
                     public void onNext(Integer i) {
                         result = bf.apply(result, i);
@@ -57,37 +64,15 @@ public class PubSub {
         };
     }
 
-    // reduce 동작 과정 - 초기값 0 [1,2,3,4,5]  ---결과--> 1개
-    // 0 -> (0,1) -> 0 + 1 = 1
-    // 1 -> (1,2) -> 1 + 2 = 3
-    // 3 -> (3,3) -> 3 + 3 = 6 ...
-    private static Publisher<Integer> sumPub(Publisher<Integer> pub) {
-        return new Publisher<Integer>() {
-            @Override
-            public void subscribe(Subscriber<? super Integer> sub) {
-                pub.subscribe(new DelegateSub(sub) {
-                    int sum = 0;
-                    @Override
-                    public void onNext(Integer i) {
-                        sum += i;
-                    }
-                    @Override
-                    public void onComplete() {
-                        sub.onNext(sum);
-                        sub.onComplete();
-                    }
-                });
-            }
-        };
-    }
 
-    private static Publisher<Integer> mapPub(Publisher<Integer> pub, Function<Integer, Integer> f) {
-        return new Publisher<Integer>() {
+    // T -> R (sub)
+    private static <T,R> Publisher<R> mapPub(Publisher<T> pub, Function<T, R> f) {
+        return new Publisher<R>() {
             @Override
-            public void subscribe(Subscriber<? super Integer> sub) {
-                pub.subscribe(new DelegateSub(sub) {
+            public void subscribe(Subscriber<? super R> sub) {
+                pub.subscribe(new DelegateSub<T,R>(sub) {
                     @Override
-                    public void onNext(Integer i) {
+                    public void onNext(T i) {
                         sub.onNext(f.apply(i));
                     }
                 });
@@ -95,7 +80,7 @@ public class PubSub {
         };
     }
 
-    private static Subscriber<Integer> logSub() {
+    private static <T> Subscriber<T> logSub() {
         return new Subscriber<>() {
             @Override
             public void onSubscribe(Subscription s) {
@@ -105,7 +90,7 @@ public class PubSub {
             }
 
             @Override
-            public void onNext(Integer i) {
+            public void onNext(T i) {
                 log.info("onNext : {}", i);
             }
 
@@ -122,12 +107,12 @@ public class PubSub {
         };
     }
 
-    private static Publisher<Integer> iterPub(List<Integer> data) {
+    private static <T> Publisher<T> iterPub(List<T> data) {
         return new Publisher<>() {
             // 제공할 데이터 예시
 
             @Override
-            public void subscribe(Subscriber<? super Integer> sub) {
+            public void subscribe(Subscriber<? super T> sub) {
                 sub.onSubscribe(new Subscription() { // Subscription : 구독 액션을 나타냄
                     @Override
                     public void request(long l) {

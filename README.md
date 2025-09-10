@@ -1,10 +1,18 @@
 # To-do
-- [1:08:33](https://www.youtube.com/watch?v=DChIxy9g19o&list=PLOLeoJ50I1kkqC4FuEztT__3xKSfR2fpw&index=2)
+[1:10:00](https://www.youtube.com/watch?v=Wlqu1xvZCak&list=PLOLeoJ50I1kkqC4FuEztT__3xKSfR2fpw&index=3)
 
+- 비동기 
+  - 어떤게 먼저 올지 모르는데 순서 어케 정해 ? 
+  - 하나의 퍼블리셔는 싱글쓰레드를 사용하기 때문에 넘어가는 순서가 뒤바뀌지 않고 큐에 쌓였다가 실행된다. 
+- push 방식이라 데이터가 계속 들어올텐데 멈추는 기준을 어케 정해 ? 
 # Reactive Programing
+## 참고 자료
+- https://projectreactor.io/docs
+- https://github.com/reactive-streams/reactive-streams-jvm
 
 ## Operators
 - PubSub.java
+
 
 ## Others
 ### 아래 코드에서 Throwable  대신 Exception을 넣는 것의 차이

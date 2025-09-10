@@ -30,13 +30,14 @@ public class PubSub {
     public static void main(String[] args) {
         // Pub : 데이터 제공자
         Publisher<Integer> pub = iterPub(Stream.iterate(1, a -> a + 1).limit(10).collect(Collectors.toList()));
-        Publisher<String> mapPub = mapPub(pub, s -> "[" + s + "]");
+ //       Publisher<String> mapPub = mapPub(pub, s -> "[" + s + "]");
 
 //        Publisher<Integer> map2Pub = mapPub(mapPub, s -> s / 5);
 //        Publisher<Integer> sumPub = sumPub(pub); // 계산만 하고 있다가 계산 다 하면 그때야 보내는 pub
-        Publisher<String> reducePub = reducePub(pub, "", (a, b) -> a+ "-" +b); // pub, 초기값, 계산로직
+//        Publisher<String> reducePub = reducePub(pub, "", (a, b) -> a+ "-" +b); // pub, 초기값, 계산로직
+        Publisher<StringBuilder> reducePub2 = reducePub(pub, new StringBuilder(), (a, b) -> a.append(b).append(",")); // 제너릭 적용 후 사용
         // Sub : 데이터 받는자
-        reducePub.subscribe(logSub());
+        reducePub2.subscribe(logSub());
     }
 
 
@@ -44,14 +45,14 @@ public class PubSub {
     // 0 -> (0,1) -> 0 + 1 = 1
     // 1 -> (1,2) -> 1 + 2 = 3
     // 3 -> (3,3) -> 3 + 3 = 6 ...
-    private static Publisher<String> reducePub(Publisher<Integer> pub, String init, BiFunction<String, Integer, String> bf) {
-        return new Publisher<String>() {
+    private static <T,R> Publisher<R> reducePub(Publisher<T> pub, R init, BiFunction<R, T, R> bf) {
+        return new Publisher<R>() {
             @Override
-            public void subscribe(Subscriber<? super String> sub) {
-                pub.subscribe(new DelegateSub<Integer, String>(sub) {
-                    String result = init;
+            public void subscribe(Subscriber<? super R> sub) {
+                pub.subscribe(new DelegateSub<T, R>(sub) {
+                    R result = init;
                     @Override
-                    public void onNext(Integer i) {
+                    public void onNext(T i) {
                         result = bf.apply(result, i);
                     }
                     @Override
